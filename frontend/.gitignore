@@ -1,0 +1,17 @@
+.DS_Store
+.export/
+.frames/
+.lark_tmp/
+.superpowers/
+.tmp_key_extract/
+output/
+tmp/
+tmp_cn_assets/
+snapextract_minimax_config.json
+*.xml
+*.md~
+home_hero_demo.mp4
+modal_capture_animation.mp4
+tmp_*.png
+tmp_*.jpg
+tmp_*.jpeg

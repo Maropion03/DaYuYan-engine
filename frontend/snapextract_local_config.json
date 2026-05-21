@@ -1,0 +1,16 @@
+{
+  "local_qwen_base": "http://127.0.0.1:8910/v1",
+  "local_qwen_path": "/chat/completions",
+  "model": "qwen2.5vl3b",
+  "fallback_models": [
+    "qwen2.5vl3b"
+  ],
+  "port": 8765,
+  "ocr_enabled": true,
+  "ocr_python": "C:\\Users\\1\\Documents\\Codex\\2026-05-13\\ocr-qwen-ai\\.conda-ocr\\python.exe",
+  "ocr_backend": "tesseract",
+  "ocr_lang": "zh",
+  "ocr_max_pages": 4,
+  "tesseract_cmd": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+  "tessdata_prefix": "C:\\Users\\1\\Documents\\Codex\\2026-05-13\\ocr-qwen-ai\\tessdata"
+}

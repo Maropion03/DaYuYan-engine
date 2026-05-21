@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SnapExtract Vertical Flow</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #ffffff;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    .wrap {
+      width: min(920px, 96vw);
+      padding: 32px;
+      background: #ffffff;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <pre class="mermaid">
+flowchart TD
+    A[上传主文件] --> B[原文预览]
+    B --> C[解析对照]
+    C --> C1[原文]
+    C --> C2[OCR]
+    C --> C3[SnapExtract]
+
+    C3 --> D[识别文档类型]
+    D --> E{四类场景}
+    E --> E1[简历 / 合同 / 单据 / 论文]
+
+    E1 --> F[追加内容上传]
+    F --> F1[JD / 修改版 / 流水 / 研究方向]
+
+    F1 --> G[场景分析]
+    G --> H[字段卡片]
+    G --> I[重点判断]
+    G --> J[风险 / 异常 / 匹配]
+    G --> K[综合结果]
+    </pre>
+  </div>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        background: "#ffffff",
+        fontFamily: "Microsoft YaHei, PingFang SC, Arial, sans-serif",
+        primaryColor: "#f8fafc",
+        primaryTextColor: "#111827",
+        primaryBorderColor: "#2563eb",
+        lineColor: "#475569",
+        secondaryColor: "#eef2ff",
+        tertiaryColor: "#ecfdf5"
+      }
+    });
+  </script>
+</body>
+</html>

@@ -4,11 +4,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$root = "C:\Users\1\Documents\Codex\2026-05-13\ocr-qwen-ai"
+$root = $PSScriptRoot
 $script = Join-Path $root "serve_snapextract.py"
+
+# Static files live one level up in ../frontend/
+$frontendDir = (Resolve-Path (Join-Path $root "..\frontend")).Path
 
 if (-not (Test-Path -LiteralPath $script)) {
     throw "Frontend server script not found: $script"
+}
+
+if (-not (Test-Path -LiteralPath $frontendDir)) {
+    throw "Frontend directory not found: $frontendDir"
 }
 
 $existing = Get-CimInstance Win32_Process |
@@ -26,7 +33,7 @@ if ($existing) {
 
 $python = (Get-Command python -ErrorAction Stop).Source
 $proc = Start-Process -FilePath $python `
-    -ArgumentList @($script, "--port", $Port.ToString()) `
+    -ArgumentList @($script, "--port", $Port.ToString(), "--frontend-dir", $frontendDir) `
     -WorkingDirectory $root `
     -WindowStyle Hidden `
     -PassThru

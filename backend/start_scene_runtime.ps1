@@ -4,16 +4,23 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$root = "C:\Users\1\Documents\Codex\2026-05-13\ocr-qwen-ai"
+$root = $PSScriptRoot
 $script = Join-Path $root "scene_runtime\app.py"
-$python = Join-Path $root ".conda-ocr\python.exe"
+
+# Prefer a local .conda-ocr if it exists alongside this script; otherwise
+# fall back to the historic env path used during development.
+$pythonCandidates = @(
+    (Join-Path $root ".conda-ocr\python.exe"),
+    "C:\Users\1\Documents\Codex\2026-05-13\ocr-qwen-ai\.conda-ocr\python.exe"
+)
+$python = $pythonCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 
 if (-not (Test-Path -LiteralPath $script)) {
     throw "Scene runtime script not found: $script"
 }
 
-if (-not (Test-Path -LiteralPath $python)) {
-    throw "Scene runtime python not found: $python"
+if (-not $python) {
+    throw "Scene runtime python not found. Tried: $($pythonCandidates -join '; ')"
 }
 
 $existing = Get-CimInstance Win32_Process |

@@ -112,21 +112,32 @@ $root = "C:\Users\1\Documents\Codex\2026-05-13\ocr-qwen-ai"
 
 ## 四、启动应用
 
+> **重要：用绝对路径**。下面命令把 `<PKG>` 替换成你的项目根目录（即 `03_应用安装包` 所在父目录的完整路径），不要依赖 `cd` 当前所在位置。
+
 依次启动 4 个服务（建议各开一个 PowerShell 窗口）：
 
 ```powershell
 # 1. Qwen NPU 推理服务（端口 8910）
-cd 03_应用安装包\backend
-.\start_qwen25vl3b.cmd
+& "<PKG>\03_应用安装包\backend\start_qwen25vl3b.cmd"
 
 # 2. 场景分析后端（端口 8766）
-.\start_scene_runtime.cmd
+& "<PKG>\03_应用安装包\backend\start_scene_runtime.cmd"
 
 # 3. 前端静态服务（端口 8000）
-.\start_frontend.cmd
+& "<PKG>\03_应用安装包\backend\start_frontend.cmd"
 
 # 4. Tesseract + 多模态代理（端口 8765）
-cd ..\frontend
+cd "<PKG>\03_应用安装包\frontend"
+python proxy.py
+```
+
+**示例（解压 / clone 到桌面时）：**
+
+```powershell
+& "C:\Users\<你>\Desktop\答于言_提交包\03_应用安装包\backend\start_qwen25vl3b.cmd"
+& "C:\Users\<你>\Desktop\答于言_提交包\03_应用安装包\backend\start_scene_runtime.cmd"
+& "C:\Users\<你>\Desktop\答于言_提交包\03_应用安装包\backend\start_frontend.cmd"
+cd "C:\Users\<你>\Desktop\答于言_提交包\03_应用安装包\frontend"
 python proxy.py
 ```
 
@@ -135,6 +146,14 @@ python proxy.py
 ```
 http://localhost:8000/snapextract_v3.html
 ```
+
+**验证 4 个服务全部在线：**
+
+```powershell
+netstat -ano | findstr ":8765 :8766 :8000 :8910" | findstr LISTENING
+```
+
+应该看到 4 行（每个端口一行）。少任何一行就是对应服务没起来，回头看那个服务的启动输出排查。
 
 ---
 

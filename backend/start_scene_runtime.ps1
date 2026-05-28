@@ -26,7 +26,7 @@ if (-not $python) {
 $existing = Get-CimInstance Win32_Process |
     Where-Object {
         $_.Name -match '^python(?:\.exe)?$' -and
-        $_.CommandLine -like "*scene_runtime\\app.py*"
+        $_.CommandLine -match 'scene_runtime[\\/]app\.py'
     }
 
 if ($existing) {

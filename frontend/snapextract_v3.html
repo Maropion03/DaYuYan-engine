@@ -8542,6 +8542,27 @@ function inferSceneTypeFromParseResult(result){
   return current && current !== 'unknown' ? current : 'paper';
 }
 
+// Hard reject: 当 Qwen 返回的 doc_type + 解析文本 + OCR 文本都没命中
+// 4 类场景关键词时，整个解析视为不支持，前端阻断、不渲染场景结果。
+function isSupportedScene(result){
+  const docType = String(result?.doc_type || '').toLowerCase();
+  if (docType){
+    if (/paper|article|publication|arxiv|论文|摘要/.test(docType)) return true;
+    if (/resume|cv|curriculum|简历/.test(docType)) return true;
+    if (/contract|agreement|合同|协议/.test(docType)) return true;
+    if (/statement|receipt|invoice|bank|fare|对账|发票|流水|收据/.test(docType)) return true;
+  }
+  const text = flattenParseTextForScene({
+    result,
+    ocr_text: SE.parseTask?.tess_text,
+  }).map(v => String(v || '').toLowerCase()).join(' ');
+  if (/resume|cv|curriculum|简历|求职|教育背景|实习经历|工作经历|项目经历|技能|gpa|专业排名|本科/.test(text)) return true;
+  if (/contract|agreement|合同|协议|甲方|乙方|签署|条款|付款|违约|授权代表/.test(text)) return true;
+  if (/statement|receipt|invoice|bank|fare|amount|对账|流水|收据|发票|付款方式|车费|金额/.test(text)) return true;
+  if (/paper|article|abstract|authors|venue|arxiv|论文|摘要|研究|方法|实验|结论/.test(text)) return true;
+  return false;
+}
+
 function buildStructuredParseMarkdown(result){
   const lines = [];
   const fields = Array.isArray(result?.fields) ? result.fields.filter(Boolean) : [];
@@ -10312,6 +10333,57 @@ function renderSeProgress(){
   }
   if (window.lucide) lucide.createIcons();
 }
+function renderSeUnsupported(result){
+  const body = document.getElementById('pane-se-body');
+  const tag = document.getElementById('pane-se-tag');
+  if (!body) return;
+  const fileName = SE.parseTask?.file?.name || '当前文件';
+  const detectedRaw = String(result?.doc_type || '').trim() || 'unknown';
+  const SCENES = [
+    { icon:'📄', name:'论文 / 学术报告', hint:'arXiv 论文、技术报告、综述' },
+    { icon:'👤', name:'简历 / CV',       hint:'求职简历、个人简介' },
+    { icon:'📜', name:'合同 / 协议',     hint:'采购、服务、保密合同' },
+    { icon:'🧾', name:'票据 / 对账单',   hint:'发票、报销单、银行流水' },
+  ];
+  const html = `
+    <div class="ppane-md">
+      <section class="rounded-lg border px-5 py-5" style="border-color:rgba(255,80,80,.32);background:rgba(255,80,80,.06);">
+        <div class="flex items-center gap-2 mb-3">
+          <span style="font-size:20px;">⚠️</span>
+          <div class="text-[15px] text-t1 font-medium">未识别为支持的场景</div>
+        </div>
+        <div class="text-[13px] text-t2 leading-7">
+          当前文件 <span class="font-mono">「${escapeHtml(fileName)}」</span> 未能归入答于言支持的 4 类场景，已停止后续解析。
+        </div>
+        <div class="text-[11.5px] text-t3 mt-2 font-mono">模型返回的 doc_type：<span>${escapeHtml(detectedRaw)}</span></div>
+      </section>
+      <section class="mt-4">
+        <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-t3 mb-3">当前仅支持以下 4 类场景</div>
+        <div class="grid grid-cols-2 gap-2">
+          ${SCENES.map(s => `
+            <div class="rounded-md border border-line1 px-3 py-3" style="background:var(--bg-1);">
+              <div class="flex items-center gap-2 mb-1">
+                <span style="font-size:16px;">${s.icon}</span>
+                <div class="text-[13px] text-t1">${s.name}</div>
+              </div>
+              <div class="text-[11.5px] text-t3 leading-relaxed">${s.hint}</div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+      <section class="mt-4 text-[12px] text-t3 leading-relaxed">
+        请重新上传一份属于上述 4 类的文档，或返回首页选择内置示例样本。
+      </section>
+    </div>
+  `;
+  swapPaneContent(body, html);
+  if (tag){
+    tag.classList.remove('chip-ok','chip-info','chip-brand');
+    tag.classList.add('chip-warn');
+    tag.innerHTML = '<span class="dot"></span>unsupported';
+  }
+}
+
 function renderSeDone(md){
   const body = document.getElementById('pane-se-body');
   const tag = document.getElementById('pane-se-tag');
@@ -10564,6 +10636,20 @@ async function startTesseractAndSe(type, mockKey){
     if (ocrResultForStructure){
       SE.parseTask.tess_result = SE.parseTask.tess_result || ocrResultForStructure;
       SE.parseTask.tess_text = String(ocrResultForStructure?.text || SE.parseTask.tess_text || '');
+    }
+    // Hard gate: 上传的文件必须能归到 4 类场景之一，否则给出友好错误页
+    if (!isSupportedScene(result)){
+      const detectedRaw = String(result?.doc_type || '').trim();
+      SE.parseTask.state = 'unsupported';
+      SE.parseTask.error = 'unsupported_scene';
+      SE.parseTask.detected_type = null;
+      SE.parseTask.se_json = { status: 'unsupported', doc_type: detectedRaw || 'unknown' };
+      SE.parseTask.se_md = '## 未识别为支持的场景\n\n当前文件未匹配任何 4 类支持场景（论文 / 简历 / 合同 / 票据）。';
+      renderSeUnsupported(result);
+      markStructuredDone();
+      setStepperStep(2, 'error');
+      hideSnapCta();
+      return;
     }
     const finalType = inferSceneTypeFromParseResult(result);
     SE.parseTask.detected_type = finalType;

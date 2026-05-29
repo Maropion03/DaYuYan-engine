@@ -40,7 +40,7 @@ class DocumentAsset:
 
 
 def analyze_scene(req: SceneRequest, scene: str) -> Dict[str, Any]:
-    max_pages = {"resume": 2, "contract": 3, "statement": 2, "paper": 5}.get(scene, 2)
+    max_pages = {"resume": 2, "contract": 3, "statement": 2, "paper": 10}.get(scene, 2)
     max_images = {"resume": 1, "contract": 0, "statement": 2, "paper": 3}.get(scene, 1)
     main_doc = load_document_asset(req.main_file, "main_file", max_pages=max_pages)
     supp_doc = None

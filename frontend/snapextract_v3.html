@@ -8542,24 +8542,82 @@ function inferSceneTypeFromParseResult(result){
   return current && current !== 'unknown' ? current : 'paper';
 }
 
-// Hard reject: 当 Qwen 返回的 doc_type + 解析文本 + OCR 文本都没命中
-// 4 类场景关键词时，整个解析视为不支持，前端阻断、不渲染场景结果。
+// Hard reject: 当文档**实际内容**无法归到 4 类场景任一时，停掉后续渲染。
+// 设计要点：
+//  1. 不信任 result.doc_type（被 prompt schema 模板偏置，模型常常照抄）
+//  2. 不靠单关键词（"abstract" 在艺术语境也出现）
+//  3. 看真正"装填了字段"的数量 + OCR 文本量 + 多关键词共现
+//  4. 命中明显的"非文档"信号（wallpaper/photo/illustration/装饰图等）直接拒
 function isSupportedScene(result){
-  const docType = String(result?.doc_type || '').toLowerCase();
-  if (docType){
-    if (/paper|article|publication|arxiv|论文|摘要/.test(docType)) return true;
-    if (/resume|cv|curriculum|简历/.test(docType)) return true;
-    if (/contract|agreement|合同|协议/.test(docType)) return true;
-    if (/statement|receipt|invoice|bank|fare|对账|发票|流水|收据/.test(docType)) return true;
-  }
-  const text = flattenParseTextForScene({
-    result,
-    ocr_text: SE.parseTask?.tess_text,
-  }).map(v => String(v || '').toLowerCase()).join(' ');
-  if (/resume|cv|curriculum|简历|求职|教育背景|实习经历|工作经历|项目经历|技能|gpa|专业排名|本科/.test(text)) return true;
-  if (/contract|agreement|合同|协议|甲方|乙方|签署|条款|付款|违约|授权代表/.test(text)) return true;
-  if (/statement|receipt|invoice|bank|fare|amount|对账|流水|收据|发票|付款方式|车费|金额/.test(text)) return true;
-  if (/paper|article|abstract|authors|venue|arxiv|论文|摘要|研究|方法|实验|结论/.test(text)) return true;
+  const ocrText  = String(SE.parseTask?.tess_text || '').trim();
+  const fields   = Array.isArray(result?.fields) ? result.fields : [];
+  const summary  = String(result?.summary || '').toLowerCase();
+  const docType  = String(result?.doc_type || '').toLowerCase();
+
+  // 抽取真正"装填了内容"的字段
+  const meaningful = fields.filter(f => {
+    const v = String(f?.value || '').trim();
+    if (v.length < 3) return false;
+    if (/^(unknown|none|n\/a|null|undefined|tbd|待填|未知|无|无内容|placeholder|示例)$/i.test(v)) return false;
+    if (/^\[.+\]$/.test(v)) return false; // bracket placeholder like [Title]
+    return true;
+  });
+  const filledNames = meaningful.map(f => String(f?.name || '').toLowerCase());
+
+  // ─── A. 强否决信号 ────────────────────────────────────────
+  // A1. 文档几乎没文字 + 字段全空 → 大概率是图片 / 截图，非文档
+  if (ocrText.length < 30 && meaningful.length === 0) return false;
+  // A2. doc_type 自报家门为图片 / 壁纸 / 插图
+  if (/wallpaper|background|illustration|artwork|photograph|photo|picture|装饰|墙纸|插图|壁纸/.test(docType)) return false;
+  // A3. summary 描述图片内容（典型壁纸/产品图特征）
+  if (/(colorful|abstract).{0,30}(design|image|pattern|gradient)/.test(summary)) return false;
+  if (/(wallpaper|background image|装饰图|壁纸)/.test(summary)) return false;
+
+  // ─── B. 强通过信号：字段名匹配 4 类场景已知字段（≥2 个填充） ───
+  const PAPER_FIELDS     = ['title','authors','abstract','method','findings','conclusion','venue','keywords'];
+  const RESUME_FIELDS    = ['candidate_name','target_role','phone','email','education','work_experience','skills'];
+  const CONTRACT_FIELDS  = ['title','party_a','party_b','amount','effective_date','expiry_date','payment_terms'];
+  const STATEMENT_FIELDS = ['issuer','date','amount','payment_method','receipt_no','merchant'];
+  const countMatch = (knownSet) => knownSet.filter(n => filledNames.includes(n)).length;
+  if (countMatch(PAPER_FIELDS)     >= 2) return true;
+  if (countMatch(RESUME_FIELDS)    >= 2) return true;
+  if (countMatch(CONTRACT_FIELDS)  >= 2) return true;
+  if (countMatch(STATEMENT_FIELDS) >= 2) return true;
+
+  // ─── C. 文本侧多关键词共现（≥2 个不同维度命中才算数） ───
+  const text = flattenParseTextForScene({ result, ocr_text: ocrText })
+    .map(v => String(v || '').toLowerCase()).join(' ');
+
+  const tally = (groups) => groups.reduce((acc, re) => acc + (re.test(text) ? 1 : 0), 0);
+
+  if (tally([
+    /(abstract|摘要)[\s\:：]/,
+    /(author|authors|作者)/,
+    /(venue|conference|journal|arxiv|proceedings|published in)/,
+    /(method|methodology|实验|results|conclusion|findings|结论|方法|实验结果)/,
+  ]) >= 2) return true;
+
+  if (tally([
+    /(简历|resume|curriculum vitae|\bcv\b)/,
+    /(education|教育|学历|学位|本科|硕士|博士)/,
+    /(work experience|工作经历|实习经历|工作经验|实习)/,
+    /(skills|技能|technical skills|专业技能)/,
+  ]) >= 2) return true;
+
+  if (tally([
+    /(合同|contract|agreement|协议)/,
+    /(甲方|乙方|party a|party b)/,
+    /(条款|clauses|terms and conditions|应付|payment)/,
+    /(签署|signed|effective date|生效日期|履约)/,
+  ]) >= 2) return true;
+
+  if (tally([
+    /(对账|statement|银行流水|bank statement)/,
+    /(发票|invoice|receipt|收据|报销单)/,
+    /(¥|￥|\$|总金额|合计|total amount|应付金额)/,
+    /(付款方式|payment method|支付宝|微信支付|银行卡|刷卡|cash|现金)/,
+  ]) >= 2) return true;
+
   return false;
 }
 
@@ -9936,6 +9994,56 @@ function renderTessDone(_text){
     tag.innerHTML = '<span class="dot"></span>done';
   }
 }
+function renderTessUnsupported(result){
+  const body = document.getElementById('pane-tess-body');
+  const tag = document.getElementById('pane-tess-tag');
+  if (!body) return;
+  const fileName = SE.parseTask?.file?.name || '当前文件';
+  const detectedRaw = String(result?.doc_type || '').trim() || 'unknown';
+  const SCENES = [
+    { icon:'📄', name:'论文 / 学术报告', hint:'arXiv 论文、技术报告、综述' },
+    { icon:'👤', name:'简历 / CV',       hint:'求职简历、个人简介' },
+    { icon:'📜', name:'合同 / 协议',     hint:'采购、服务、保密合同' },
+    { icon:'🧾', name:'票据 / 对账单',   hint:'发票、报销单、银行流水' },
+  ];
+  const html = `
+    <div class="ppane-md">
+      <section class="rounded-lg border px-5 py-5" style="border-color:rgba(255,80,80,.32);background:rgba(255,80,80,.06);">
+        <div class="flex items-center gap-2 mb-3">
+          <span style="font-size:20px;">⚠️</span>
+          <div class="text-[15px] text-t1 font-medium">未识别为支持的场景</div>
+        </div>
+        <div class="text-[13px] text-t2 leading-7">
+          当前文件 <span class="font-mono">「${escapeHtml(fileName)}」</span> 未能归入答于言支持的 4 类场景，OCR baseline 已停止。
+        </div>
+        <div class="text-[11.5px] text-t3 mt-2 font-mono">模型返回的 doc_type：<span>${escapeHtml(detectedRaw)}</span></div>
+      </section>
+      <section class="mt-4">
+        <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-t3 mb-3">当前仅支持以下 4 类场景</div>
+        <div class="grid grid-cols-2 gap-2">
+          ${SCENES.map(s => `
+            <div class="rounded-md border border-line1 px-3 py-3" style="background:var(--bg-1);">
+              <div class="flex items-center gap-2 mb-1">
+                <span style="font-size:16px;">${s.icon}</span>
+                <div class="text-[13px] text-t1">${s.name}</div>
+              </div>
+              <div class="text-[11.5px] text-t3 leading-relaxed">${s.hint}</div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+      <section class="mt-4 text-[12px] text-t3 leading-relaxed">
+        请重新上传一份属于上述 4 类的文档，或返回首页选择内置示例样本。
+      </section>
+    </div>
+  `;
+  swapPaneContent(body, html);
+  if (tag){
+    tag.classList.remove('chip-ok','chip-info','chip-brand');
+    tag.classList.add('chip-warn');
+    tag.innerHTML = '<span class="dot"></span>unsupported';
+  }
+}
 
 /* Render structured output */
 function mapLanguageLabel(value){
@@ -10416,6 +10524,7 @@ function renderOcrAfterStructuredDone(ocrPromise, structuredDonePromise = Promis
       if (!SE.parseTask) return;
       SE.parseTask.tess_result = ocrResult;
       SE.parseTask.tess_text = String(ocrResult?.text || '');
+      if (SE.parseTask.state === 'unsupported') return;
       renderTessDone(SE.parseTask.tess_text);
     })
     .catch(async ocrErr => {
@@ -10424,6 +10533,7 @@ function renderOcrAfterStructuredDone(ocrPromise, structuredDonePromise = Promis
       const msg = String(ocrErr?.message || ocrErr || 'ocr failed');
       SE.parseTask.tess_result = { backend:'tesseract', kind:'ocr_failed', text: msg };
       SE.parseTask.tess_text = msg;
+      if (SE.parseTask.state === 'unsupported') return;
       renderTessDone(msg);
     });
 }
@@ -10646,6 +10756,7 @@ async function startTesseractAndSe(type, mockKey){
       SE.parseTask.se_json = { status: 'unsupported', doc_type: detectedRaw || 'unknown' };
       SE.parseTask.se_md = '## 未识别为支持的场景\n\n当前文件未匹配任何 4 类支持场景（论文 / 简历 / 合同 / 票据）。';
       renderSeUnsupported(result);
+      renderTessUnsupported(result);
       markStructuredDone();
       setStepperStep(2, 'error');
       hideSnapCta();

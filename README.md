@@ -3,7 +3,8 @@
 # 答于言 · 文档解析引擎
 
 **DaYuYan-engine** — 完全跑在 Snapdragon NPU 上的本地文档理解引擎
-**荣获2025骁龙人工智能创新应用大赛-创意赛亚军🥈
+
+**荣获2025骁龙人工智能创新应用大赛-创意赛亚军🥈**
 不是 OCR，是 OCR 之上的判断引擎。高敏文档，从此不再上云。
 
 [![Company](https://img.shields.io/badge/Company-守扣科技_·_Soulcode-2563EB?style=flat-square)](https://github.com/Maropion03/DaYuYan-engine)

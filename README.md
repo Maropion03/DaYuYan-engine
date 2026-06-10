@@ -1,19 +1,49 @@
+<div align="center">
+
 # 答于言 · 文档解析引擎
 
-> 完全跑在 Snapdragon NPU 上的本地文档理解引擎 — 不是 OCR，是 OCR 之上的判断引擎。
-> 高敏文档，从此不再上云。
+**DaYuYan-engine** — 完全跑在 Snapdragon NPU 上的本地文档理解引擎
 
-**2025 骁龙人工智能创新应用大赛 · AI PC 赛道 · 创意赛 · 亚军**  
+不是 OCR，是 OCR 之上的判断引擎。高敏文档，从此不再上云。
 
+[![Company](https://img.shields.io/badge/Company-守扣科技_·_Soulcode-2563EB?style=flat-square)](https://github.com/Maropion03/DaYuYan-engine)
+[![Award](https://img.shields.io/badge/Award-2025_骁龙大赛_亚军-FFB020?style=flat-square&logo=qualcomm&logoColor=white)](#荣誉)
+[![Platform](https://img.shields.io/badge/Platform-Snapdragon_NPU-FF841F?style=flat-square)](docs/01_技术架构说明.md)
+[![Type](https://img.shields.io/badge/Type-文档判断引擎-7C3AED?style=flat-square)](#五四个演示场景)
+[![Runtime](https://img.shields.io/badge/Runtime-端侧_·_Zero_Cloud-0D9488?style=flat-square)](#二系统要求)
+[![Scenes](https://img.shields.io/badge/Scenes-简历_·_合同_·_对账_·_论文-1E40AF?style=flat-square)](#五四个演示场景)
+
+[演示](#演示) · [荣誉](#荣誉) · [安装](#三安装步骤) · [架构](docs/01_技术架构说明.md) · [API](docs/02_API_接口说明.md)
+
+</div>
+
+---
+
+## 演示
+
+<div align="center">
+
+![答于言 Demo：手写单据 OCR → 结构化解析 → 对账场景判断](docs/assets/demo-screenshot.png)
+
+*端侧推理 · 隐私不出本机 · 4 类高敏场景（简历 / 合同 / 对账 / 论文）*
+
+</div>
 
 ---
 
 ## 荣誉
 
+<div align="center">
+
+![2025 骁龙人工智能创新应用大赛颁奖典礼 · AI PC 赛道创意赛亚军](docs/assets/award-ceremony.png)
+
+</div>
+
 | 赛事 | 赛道 | 奖项 |
 |------|------|------|
 | 2025 骁龙人工智能创新应用大赛 | AI PC 赛道 · 创意赛 | **亚军** |
 
+> 上海守扣科技有限公司 · Soulcode 集团旗下  
 > 颁奖典礼：2025 骁龙人工智能创新应用大赛颁奖典礼（高通 × 极视角等联合主办）。
 
 ---

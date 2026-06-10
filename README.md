@@ -7,6 +7,7 @@
 
 不是 OCR，是 OCR 之上的判断引擎。高敏文档，从此不再上云。
 
+[![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
 [![Company](https://img.shields.io/badge/Company-守扣科技_·_Soulcode-2563EB?style=flat-square)](https://github.com/Maropion03/DaYuYan-engine)
 [![Award](https://img.shields.io/badge/Award-2025_骁龙大赛_亚军-FFB020?style=flat-square&logo=qualcomm&logoColor=white)](#荣誉)
 [![Platform](https://img.shields.io/badge/Platform-Snapdragon_NPU-FF841F?style=flat-square)](docs/01_技术架构说明.md)

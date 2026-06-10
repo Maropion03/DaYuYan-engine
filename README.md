@@ -14,7 +14,7 @@
 [![Runtime](https://img.shields.io/badge/Runtime-端侧_·_Zero_Cloud-0D9488?style=flat-square)](#二系统要求)
 [![Scenes](https://img.shields.io/badge/Scenes-简历_·_合同_·_对账_·_论文-1E40AF?style=flat-square)](#五四个演示场景)
 
-[演示](#演示) · [荣誉](#荣誉) · [安装](#三安装步骤) · [架构](docs/01_技术架构说明.md) · [API](docs/02_API_接口说明.md)
+[荣誉](#荣誉) · [演示](#演示) · [安装](#三安装步骤) · [架构](docs/01_技术架构说明.md) · [API](docs/02_API_接口说明.md)
 
 </div>
 
@@ -34,7 +34,6 @@
 
 > 颁奖典礼：2025 骁龙人工智能创新应用大赛颁奖典礼（高通 × 极视角等联合主办）。
 
----
 
 ---
 
